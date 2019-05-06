@@ -1,0 +1,74 @@
+- hosts: localhost
+  connection: local
+  vars:
+    packages:
+      - ufw
+      - curl
+      - apt-transport-https 
+      - ca-certificates
+      - gnupg2 
+      - software-properties-common
+      - fail2ban
+      - vim
+
+  tasks:
+
+    - name: Get current Ansible version on local host
+      local_action: command ansible --version
+      register: local_ansible_version
+    - assert:
+        that:
+          - "'1.7' in local_ansible_version.stdout"
+
+    - name: Update APT package cache (jessie)
+      apt: update_cache=yes
+      when: "'{{ ansible_distribution_release }}' == 'jessie'"
+
+    - name: Upgrade APT to the latest packages (jessie)
+      apt: upgrade=dist
+      when: "'{{ ansible_distribution_release }}' == 'jessie'"
+
+    - name: Check if oms site default exists
+      stat: path=/opt/omd/sites/default
+      register: p
+
+    - name: Stopping omd site default
+      command: omd stop default 
+      when: p.stat.exists
+
+    - name: Disable omd site default
+      command: omd disable default 
+      when: p.stat.exists
+
+    - name: Backup omd site default
+      command: tar czf /root/default_omd_upgrade.tgz /omd/sites/
+      when: p.stat.exists
+    
+    - name: Remove omd site default
+      command: omd -f rm default 
+      when: p.stat.exists
+
+    - name: Remove omd-1.20
+      apt: state=absent pkg=omd-1.20
+
+    - name: Install required packages
+      apt: state=present pkg={{ item }}
+      with_items: "{{ packages }}"
+
+    - name: Remove bananian sources.list
+      file: path='/etc/apt/sources.list.d/bananian.list' state=absent
+    
+    - name: Remove obsolete raspi sources.list
+      file: path='/etc/apt/sources.list.d/raspi.list' state=absent
+
+    - name: Update sources.list to stretch
+      command: sed -i 's/jessie/stretch/g' /etc/apt/sources.list
+    
+    - name: Update APT package cache (stretch)
+      apt: update_cache=yes
+    
+    - name: Upgrade APT to the latest packages (stretch safe)
+      apt: upgrade=safe
+    
+    - name: Upgrade APT to the latest packages (stretch dist)
+      apt: upgrade=safe
