@@ -4,6 +4,17 @@
   vars:
     remote_debfile: check-mk-raw-1.5.0p16_0.stretch_armhf.deb
 
+    packages:
+      - curl
+      - apt-transport-https
+      - ca-certificates
+      - gnupg2
+      - software-properties-common
+      - fail2ban
+      - vim
+      - xinetd
+      - telnet
+
   tasks:
 
     - name: Get current Ansible version on local host
@@ -16,6 +27,10 @@
     - name: cleanup
       command: apt-get clean
 
+    - name: Install required packages
+      apt: state=present pkg={{ item }}
+      with_items: "{{ packages }}"
+
     - name: Check if check_mk_raw pakage is in place
       stat: 
         path: /tmp/{{ remote_debfile }}
@@ -27,9 +42,38 @@
         dest: /tmp/{{ remote_debfile }}
       when: cmk_debfile.stat.exists == false
 
-    - name: Try failed install of check_mk_raw to determine deps
+    - name: Try (failed) install of check_mk_raw to determine deps
       command: dpkg -i /tmp/{{ remote_debfile }}
       ignore_errors: yes
 
     - name: Install deps
-      command: apt-get -f install
+      command: apt-get -y -f install
+
+    - name: enable SSL in apache
+      apache2_module:
+        state: present
+        name: ssl
+
+    - name: a2ensite default-ssl.conf
+      command: a2ensite default-ssl.conf
+      notify:
+        - restart apache2
+
+    - name: Copy default check_mk xinetd config
+      copy:
+        src: files/xinetd_check_mk.default
+        dest: /etc/xinetd.d/check_mk
+        owner: root
+        group: root
+        mode: 0644
+      notify: restart xinetd
+
+    - name: Install check_mk_agent
+      apt:
+        deb: /opt/omd/versions/1.5.0p16.cre/share/check_mk/agents/check-mk-agent_1.5.0p16-1_all.deb
+
+  handlers:
+    - name: restart apache2
+      service: name=apache2 state=restarted
+    - name: restart xinetd
+      service: name=xinetd state=restarted
