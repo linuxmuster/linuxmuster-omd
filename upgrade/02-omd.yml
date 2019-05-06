@@ -13,10 +13,23 @@
         that:
           - "'2.2' in local_ansible_version.stdout"
 
+    - name: cleanup
+      command: apt-get clean
+
+    - name: Check if check_mk_raw pakage is in place
+      stat: 
+        path: /tmp/{{ remote_debfile }}
+      register: cmk_debfile
+
     - name: Download "{{ remote_debfile }}"
       get_url:
         url: https://github.com/chrisss404/check-mk-arm/releases/download/1.5.0p16/{{ remote_debfile }}
-        dest: /tmp/1.5.0p16/{{ remote_debfile }}
+        dest: /tmp/{{ remote_debfile }}
+      when: cmk_debfile.stat.exists == false
 
-    - name: Try failed install ov check_mk_raw to determine deps
-      command: dpkg -i {{ remote_debfile }}
+    - name: Try failed install of check_mk_raw to determine deps
+      command: dpkg -i /tmp/{{ remote_debfile }}
+      ignore_errors: yes
+
+    - name: Install deps
+      command: apt-get -f install

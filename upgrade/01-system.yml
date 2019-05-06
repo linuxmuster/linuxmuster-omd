@@ -51,6 +51,9 @@
     - name: Remove omd-1.20
       apt: state=absent pkg=omd-1.20
 
+    - name: remove startscript for omd-1.20
+      file: path='/etc/init.d/omd-1.20'  state=absent
+
     - name: Install required packages
       apt: state=present pkg={{ item }}
       with_items: "{{ packages }}"
