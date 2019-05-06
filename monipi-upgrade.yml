@@ -16,7 +16,23 @@
       apt: update_cache=yes
 
     - name: Upgrade APT to the latest packages (jessie)
-      apt: upgrade=safe
+      apt: upgrade=dist
+
+    - name: Install required packages
+      apt: state=present pkg={{ item }}
+      with_items: "{{ packages }}"
 
     - name: Remove bananian sources.list
       file: path='/etc/apt/sources.list.d/bananian.list' state=absent
+    
+    - name: Remove obsolete raspi sources.list
+      file: path='/etc/apt/sources.list.d/raspi.list' state=absent
+
+    - name: Update sources.list to stretch
+      command: sed -i 's/jessie/stretch/g' /etc/apt/sources.list
+    
+    - name: Update APT package cache (stretch)
+      apt: update_cache=yes
+    
+    - name: Upgrade APT to the latest packages (stretch)
+      apt: upgrade=dist
