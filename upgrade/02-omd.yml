@@ -1,0 +1,22 @@
+- hosts: localhost
+  connection: local
+
+  vars:
+    remote_debfile: check-mk-raw-1.5.0p16_0.stretch_armhf.deb
+
+  tasks:
+
+    - name: Get current Ansible version on local host
+      local_action: command ansible --version
+      register: local_ansible_version
+    - assert:
+        that:
+          - "'2.2' in local_ansible_version.stdout"
+
+    - name: Download "{{ remote_debfile }}"
+      get_url:
+        url: https://github.com/chrisss404/check-mk-arm/releases/download/1.5.0p16/{{ remote_debfile }}
+        dest: /tmp/1.5.0p16/{{ remote_debfile }}
+
+    - name: Try failed install ov check_mk_raw to determine deps
+      command: dpkg -i {{ remote_debfile }}
