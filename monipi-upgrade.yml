@@ -1,0 +1,22 @@
+- hosts: localhost
+  connection: local
+  vars:
+    packages:
+      - ufw
+      - curl
+      - apt-transport-https 
+      - ca-certificates
+      - gnupg2 
+      - software-properties-common
+      - fail2ban
+      - vim
+    
+  tasks:
+    - name: Update APT package cache (jessie)
+      apt: update_cache=yes
+
+    - name: Upgrade APT to the latest packages (jessie)
+      apt: upgrade=safe
+
+    - name: Remove bananian sources.list
+      file: path='/etc/apt/sources.list.d/bananian.list' state=absent
